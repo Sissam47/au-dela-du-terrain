@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Au-delà du Terrain - Webdoc</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        /* --- ÉCRAN D'INTRODUCTION AMÉLIORÉ --- */
+        #intro-screen {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 2000;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            color: white; text-align: center;
+            box-sizing: border-box;
+            background-image: url('image/accueil.png'); /* Fond de la page principale */
+            background-size: cover;
+            background-position: center;
+            transition: opacity 1s cubic-bezier(0.7, 0, 0.3, 1), visibility 1s;
+        }
+
+        /* Voile sombre pour garder le texte de l'intro lisible */
+        .intro-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 1;
+        }
+
+        /* Encarts d'illustration dans les 4 coins de l'intro */
+        .intro-corner-box {
+            position: absolute; width: 180px; height: 110px;
+            background-size: cover; background-position: center;
+            border: 2px solid #4CAF50; border-radius: 8px;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
+            z-index: 2;
+        }
+        .corner-top-left { top: 30px; left: 30px; background-image: url('image/media.png'); }
+        .corner-top-right { top: 30px; right: 30px; background-image: url('image/accueil.png'); }
+        .corner-bottom-left { bottom: 30px; left: 30px; background-image: url('image/staff.png'); }
+        .corner-bottom-right { bottom: 30px; right: 30px; background-image: url('image/supporter.png'); }
+
+        #intro-center-box {
+            position: relative; z-index: 10; max-width: 800px; padding: 0 20px;
+        }
+
+        #intro-screen h1 {
+            font-size: 3.5rem; text-transform: uppercase; letter-spacing: 4px;
+            margin-bottom: 20px; border-bottom: 4px solid #4CAF50; padding-bottom: 15px;
+        }
+
+        #intro-screen p {
+            font-size: 1.2rem; line-height: 1.8; color: #ccc; margin-bottom: 40px;
+        }
+
+        .btn-enter {
+            padding: 18px 50px; font-size: 1.1rem; font-weight: bold;
+            text-transform: uppercase; color: #fff; background: transparent;
+            border: 2px solid #4CAF50; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.2);
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-enter:hover { background: #4CAF50; box-shadow: 0 0 30px rgba(76, 175, 80, 0.6); transform: scale(1.05); }
+
+        /* --- CONTROLLER AUDIO GLOBAL ET VOLUME --- */
+        #sound-container {
+            position: fixed; top: 30px; right: 30px; z-index: 1500;
+            display: flex; align-items: center; gap: 15px;
+            background: rgba(0,0,0,0.85); border: 1px solid #4CAF50;
+            padding: 10px 20px; border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        #sound-control {
+            background: none; border: none;
+            color: white; cursor: pointer; font-size: 0.9rem; font-weight: bold;
+            display: flex; align-items: center; gap: 10px; padding: 0;
+        }
+        .volume-box {
+            display: flex; align-items: center; gap: 8px;
+            border-left: 1px solid rgba(255,255,255,0.2); padding-left: 12px;
+        }
+        .volume-slider {
+            -webkit-appearance: none; appearance: none;
+            width: 80px; height: 6px; background: rgba(255,255,255,0.2);
+            border-radius: 3px; outline: none; cursor: pointer;
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 14px; height: 14px; background: #4CAF50; border-radius: 50%;
+        }
+
+        /* --- BOUTON RETOUR INTRO (AJOUTÉ) --- */
+        #btn-back-intro {
+            position: fixed; top: 90px; right: 30px; z-index: 1500;
+            background: rgba(0,0,0,0.85); border: 1px solid #ccc;
+            color: white; padding: 8px 18px; border-radius: 50px;
+            font-size: 0.85rem; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transition: 0.3s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        #btn-back-intro:hover {
+            background: #ffffff; color: #000000; border-color: #ffffff;
+        }
+
+        /* --- LE STADE (ACCUEIL CENTRAL) --- */
+        .container {
+            position: relative;
+            width: 100vw; height: 56.25vw;
+            max-height: 100vh; max-width: 177.78vh;
+            margin: auto;
+            background-image: url('image/accueil.png');
+            background-size: cover; background-position: center;
+            transition: transform 1.2s cubic-bezier(0.7, 0, 0.3, 1), filter 0.8s;
+        }
+
+        /* Classes de Zoom */
+        .zoom-media { transform: scale(2.2) translate(18%, 8%); }
+        .zoom-eco { transform: scale(2.2) translate(0%, 10%); }
+        .zoom-staff { transform: scale(2.2) translate(-18%, 10%); }
+        .zoom-supporters { transform: scale(2.2) translate(-12%, 18%); }
+
+        /* Titre sur la page centrale */
+        .main-title-stadium {
+            position: absolute; top: 30px; left: 50%; transform: translateX(-50%); z-index: 120;
+            color: #fff; font-size: 3rem; font-weight: bold;
+            text-transform: uppercase; letter-spacing: 2px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.9);
+            pointer-events: none;
+        }
+
+        /* Logo IUT en bas à droite de la page centrale */
+        .iut-logo-stadium {
+            position: absolute; bottom: 20px; right: 10px; z-index: 120;
+            width: 120px; height: auto;
+            filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.8));
+            pointer-events: none;
+        }
+
+        /* --- BOUTON CONCLUSION --- */
+        .btn-conclusion-trigger {
+            position: absolute; top: 100px; left: 50%;
+            transform: translateX(-50%); z-index: 150;
+            padding: 14px 40px; background: rgba(0, 0, 0, 0.85);
+            color: #fff; border: 2px solid #ffcc00; border-radius: 50px;
+            cursor: pointer; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;
+            display: none; animation: pulseGlow 2s infinite; transition: 0.3s;
+        }
+        .btn-conclusion-trigger:hover { background: #ffcc00; color: #000; box-shadow: 0 0 25px #ffcc00; }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 10px rgba(255, 204, 0, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(255, 204, 0, 0.8); }
+            100% { box-shadow: 0 0 10px rgba(255, 204, 0, 0.4); }
+        }
+
+        /* Barre d'avancement de l'exploration */
+        #exploration-bar {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); padding: 10px 25px; border-radius: 30px;
+            color: #ccc; font-size: 0.95rem; font-weight: bold; z-index: 100;
+            border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            pointer-events: none;
+        }
+
+        /* --- POINTS INTERACTIFS AVEC TOOLTIP --- */
+        .dot {
+            position: absolute; width: 45px; height: 45px;
+            background: rgba(255,255,255,0.8); border: 3px solid #000; border-radius: 50%;
+            cursor: pointer; z-index: 100; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .dot::after {
+            content: attr(data-name); position: absolute; top: -45px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9); color: white; padding: 8px 15px; border-radius: 5px;
+            font-size: 14px; font-weight: bold; white-space: nowrap; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s, transform 0.3s; border: 1px solid #4CAF50;
+        }
+        .dot:hover { background: #fff; transform: scale(1.3); box-shadow: 0 0 20px #fff; }
+        .dot:hover::after { opacity: 1; transform: translateX(-50%) translateY(-5px); }
+
+        #dot-media { top: 60%; left: 26%; }
+        #dot-eco { top: 60%; left: 50%; }
+        #dot-staff { top: 60%; left: 75%; }
+        #dot-supporters { top: 32%; left: 62%; }
+
+        /* --- OVERLAY DE CONTENU --- */
+        .content-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; z-index: 1000; background-size: cover; background-position: center;
+            animation: fadeIn 0.8s forwards;
+        }
+        .content-filter {
+            width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85);
+            padding: 60px 12%; box-sizing: border-box; overflow-y: auto; color: white;
+        }
+        .active { display: block; }
+
+        /* --- LAYOUT QUINCONCE --- */
+        .eco-row { display: flex; align-items: center; gap: 60px; margin-bottom: 100px; }
+        .eco-row:nth-child(even) { flex-direction: row-reverse; }
+        .eco-text { flex: 1.2; }
+        .eco-img-container { flex: 0.8; }
+        .img-illustr { width: 100%; border-radius: 12px; border: 2px solid #4CAF50; box-shadow: 0 15px 40px rgba(0,0,0,0.6); }
+
+        /* --- TYPOGRAPHIE --- */
+        .header-content { border-bottom: 4px solid #4CAF50; padding-bottom: 20px; margin-bottom: 60px; text-align: center; }
+        h2 { font-size: 2.1rem; text-transform: uppercase; margin: 0; letter-spacing: 2px; }
+        h3 { color: #4CAF50; font-size: 1.8rem; margin-bottom: 15px; text-transform: uppercase; border-left: 5px solid #4CAF50; padding-left: 15px; }
+        p { line-height: 1.8; font-size: 1.1rem; color: #f0f0f0; text-align: justify; }
+
+        /* --- GRILLE 3 COLONNES --- */
+        .grid-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 60px; }
+        .section-img { width: 100%; height: 450px; object-fit: cover; border-radius: 15px; margin-bottom: 40px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+
+        /* --- ENCART MÉDIA --- */
+        .audio-player-box { background: rgba(255, 255, 255, 0.05); padding: 40px; border-radius: 15px; border: 1px solid #4CAF50; text-align: center; margin: 50px 0 80px 0; }
+        audio { width: 100%; max-width: 600px; margin-top: 20px; }
+        .photo-encart { background: #1a1a1a; padding: 10px; border-radius: 8px; }
+
+        /* --- BOUTON RETOUR --- */
+        .btn-back {
+            position: fixed; bottom: 40px; right: 40px;
+            padding: 15px 40px; background: #fff; color: #000;
+            border: none; cursor: pointer; font-weight: bold; text-transform: uppercase;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: 0.3s;
+        }
+        .btn-back:hover { background: #4CAF50; color: #fff; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        @media (max-width: 1024px) {
+            .eco-row, .eco-row:nth-child(even) { flex-direction: column; text-align: center; gap: 30px; }
+            .grid-info { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<audio id="bg-music" loop>
+    <source src="audio.mp3" type="audio/mpeg">
+</audio>
+
+<div id="sound-container">
+    <button id="sound-control" onclick="toggleMainSound()">
+        <span id="sound-icon">🔇</span> <span id="sound-text">Ambiance désactivée</span>
+    </button>
+    <div class="volume-box">
+        <label for="volume-range" style="color: #ccc; font-size: 0.8rem; font-weight: bold;">🎚️</label>
+        <input type="range" id="volume-range" class="volume-slider" min="0" max="1" step="0.05" value="0.5" oninput="changeVolume(this.value)">
+    </div>
+</div>
+
+<button id="btn-back-intro" onclick="returnToIntro()">
+    <span>🏠</span> Retour à l'intro
+</button>
+
+<div id="intro-screen">
+    <div class="intro-overlay"></div>
+    
+    <div class="intro-corner-box corner-top-left"></div>
+    <div class="intro-corner-box corner-top-right"></div>
+    <div class="intro-corner-box corner-bottom-left"></div>
+    <div class="intro-corner-box corner-bottom-right"></div>
+
+    <div id="intro-center-box">
+        <h1>Au-delà du Terrain</h1>
+        <p>Le football moderne ne se résume plus aux 90 minutes passées sur la pelouse. Derrière le spectacle se cache une gigantesque machinerie humaine, financière et médiatique. Plongez dans les coulisses du sport le plus populaire de la planète à travers une expérience interactive inédite.</p>
+        <button class="btn-enter" onclick="startExperience()">Entrer dans l'expérience</button>
+    </div>
+</div>
+
+<div class="container" id="stadium">
+    <div class="main-title-stadium">Au-delà du terrain</div>
+
+    <img src="image/logo_iut_info.png" class="iut-logo-stadium" alt="Logo IUT Informatique">
+
+    <button id="conclusion-btn" class="btn-conclusion-trigger" onclick="show('conclusion')">🔓 Découvrir la Conclusion & Crédits</button>
+    
+    <div id="dot-media" class="dot" data-name="LES MÉDIAS" onclick="show('media')"></div>
+    <div id="dot-eco" class="dot" data-name="ÉCONOMIE" onclick="show('eco')"></div>
+    <div id="dot-staff" class="dot" data-name="STAFF & ARBITRAGE" onclick="show('staff')"></div>
+    <div id="dot-supporters" class="dot" data-name="LE 12ÈME HOMME" onclick="show('supporters')"></div>
+
+    <div id="exploration-bar">Exploration : <span id="visited-count">0</span> / 4 zones explorées</div>
+</div>
+
+<div class="content-overlay" id="overlay">
+    <div class="content-filter" id="filter">
+        <div id="dynamic-content"></div>
+        <button class="btn-back" onclick="hide()">Retour au stade</button>
+    </div>
+</div>
+
+<script>
+    const visitedZones = { media: false, eco: false, staff: false, supporters: false };
+    let totalVisited = 0;
+
+    const bgMusic = document.getElementById('bg-music');
+    let soundEnabled = false; 
+    let isInterviewPlaying = false;
+
+    bgMusic.volume = 0.5;
+
+    function startExperience() {
+        const intro = document.getElementById('intro-screen');
+        intro.style.opacity = '0';
+        
+        soundEnabled = true;
+        updateSoundControlUI();
+        bgMusic.play().catch(e => console.log("Audio bloqué ou fichier audio.mp3 manquant"));
+
+        setTimeout(() => {
+            intro.style.visibility = 'hidden';
+        }, 1000);
+    }
+
+    // FONCTION RETOUR INTRO RAJOUTÉE
+    function returnToIntro() {
+        const intro = document.getElementById('intro-screen');
+        intro.style.visibility = 'visible';
+        intro.style.opacity = '1';
+    }
+
+    function toggleMainSound() {
+        if (bgMusic.paused) {
+            bgMusic.play().catch(e => console.log("Fichier audio introuvable"));
+            soundEnabled = true;
+        } else {
+            bgMusic.pause();
+            soundEnabled = false;
+        }
+        updateSoundControlUI();
+    }
+
+    function changeVolume(val) {
+        bgMusic.volume = val;
+    }
+
+    function updateSoundControlUI() {
+        const icon = document.getElementById('sound-icon');
+        const text = document.getElementById('sound-text');
+        
+        if (isInterviewPlaying) {
+            icon.innerText = "🔇";
+            icon.style.color = "#ff4a4a";
+            text.innerText = "Ambiance en pause (Interview)";
+        } else if (soundEnabled) {
+            icon.innerText = "🔊";
+            icon.style.color = "#4CAF50";
+            text.innerText = "Ambiance active";
+        } else {
+            icon.innerText = "🔇";
+            icon.style.color = "#ff4a4a";
+            text.innerText = "Ambiance désactivée";
+        }
+    }
+
+    const data = {
+        eco: {
+            zoom: 'zoom-eco',
+            bgImage: 'url("https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?q=80&w=2070")',
+            html: `
+                <div class="header-content">
+                    <h2>Économie : La Mutation du Football</h2>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>L'Explosion Télévisuelle</h3>
+                        <p>Avant les années 1990, le football est un sport immensément populaire mais structurellement pauvre, où la majorité des revenus provient encore de la billetterie physique. La rupture historique intervient en 1992 avec la scission de la Premier League anglaise : les clubs décident de s'émanciper de la fédération pour négocier directement leurs propres droits de diffusion télévisuelle.</p>
+                        <p>Cette privatisation des images attire des géants des médias comme Sky Sports, injectant instantanément des sommes astronomiques dans le circuit. L'argent commence alors à couler à flots, déclenchant une réaction en chaîne à travers l'Europe : les stades se modernisent, les salaires décollent et le football quitte sa dimension purement locale pour se transformer en un spectacle de divertissement mondial permanent, diffusé 24h/24 aux quatre coins du globe.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="image/premierleague.png" class="img-illustr" alt="Droits TV">
+                    </div>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>L'Arrêt Bosman : Le Big Bang de la Mondialisation</h3>
+                        <p>En décembre 1995, une décision juridique va définitivement faire basculer le football dans l'era de la mondialisation. En donnant raison à Jean-Marc Bosman, un joueur belge de seconde zone bloqué par son club, la Cour de justice des Communautés européennes applique la libre circulation des travailleurs au sport professionnel. Cela provoque la fin immédiate des quotas de joueurs étrangers issus de l'Union Européenne et accorde une liberté totale de mouvement aux athlètes arrivés en fin de contrat.</p>
+                        <p>Ce verdict brise les frontières et donne naissance aux premières "équipes-monde". L'arrêt Bosman dérégule totalement le marché des transferts, concentrant de manière irrémédiable les meilleurs talents de la planète au sein d'une poignée de clubs d'élite surpuissants. Dès lors, le passeport s'efface devant le capital, marquant le début du football business moderne. En effet, cet arrêt s'inscrit directement dans l'élan de mondialisation globale de notre époque, démontrant une corrélation étroite entre les mutations de la société et le monde du ballon rond, qui s'affirme comme son parfait reflet.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="image/bosman.jpg" class="img-illustr" alt="Arrêt Bosman">
+                    </div>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>L'Ère des États-Nations et du Soft Power</h3>
+                        <p>À partir des années 2010, le capitalisme footballistique franchit un nouveau palier géopolitique avec l'apparition des clubs-États. Le rachat du Paris Saint-Germain par le Qatar ou de Manchester City par les Émirats Arabes Unis transforme radicalement l'économie du sport. Le football n'est plus seulement une affaire de mécènes locaux, mais un outil d'influence et de diplomatie internationale, communément appelé le <i>soft power</i>, visant à redorer l'image globale de puissances étatiques sur la scène internationale.</p>
+                        <p>Cette entrée d'actifs quasi illimités a provoqué une inflation spectaculaire sur le marché des transferts. Le transfert historique de Neymar au PSG pour 222 millions d'euros en est le point de rupture : il a prouvé que le prix d'un joueur n'obéissait plus à des lois économiques rationnelles. Le joueur de football moderne cesse d'être un simple sportif pour devenir à la fois un actif financier spéculatif et une marque commerciale mondiale.</p>
+                        <p>Une fois de plus, un parallèle évident se dessine : l'inflation globale de la vie courante se fait durement ressentir sur le marché du football. Bien que les joueurs soient en théorie rémunérés proportionnellement à ce qu'ils rapportent en termes de sponsoring, de visibilité et de merchandising, des montants exorbitants continuent d'exploser. Ces chiffres vertigineux font écho aux dérives d'une société contemporaine façonnée par l'ère de la surconsommation, où l'offre capitule face à l'immensité de la demande.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="image/Neymar_PSG.jpg" class="img-illustr" alt="Neymar">
+                    </div>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>Une Oligarchie Connectée et Starifiée</h3>
+                        <p>Aujourd'hui, l'industrie globale du football pèse des dizaines de milliards d'euros, mais cette richesse immense cache de profondes inégalités. Le marché s'est structuré autour d'une oligarchie financière : les quinze plus grands clubs européens captent l'essentiel des revenus commerciaux, des sponsors et des trophées majeurs, reléguant le reste du paysage sportif à un rôle de formateurs ou de faire-valoir.</p>
+                        <p>En parallèle, l'économie s'est profondément dématérialisée grâce au numérique. Les supporters physiques dans le stade ne sont plus l'unique priorité ; ce sont désormais les milliards de "fans connectés" à travers le monde qui font la valeur économique d'un club. Les idoles modernes se mesurent à leur nombre d'abonnés sur Instagram ou TikTok, comme nous le précise Alexandre VAU dans l'interview, créant un phénomène de starification extrême où la notoriété numérique d'un seul joueur peut parfois dépasser l'institution historique de son propre club.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="image/riche.jpg" class="img-illustr" alt="Fans">
+                    </div>
+                </div>
+            `
+        },
+        media: {
+            zoom: 'zoom-media',
+            bgImage: 'url("image/media.png")',
+            html: `
+                <div class="header-content">
+                    <h2>Les Médias : L'impact psychologique</h2>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>Interview avec Alexandre VAU</h3>
+                        <p>Alexandre VAU, journaliste chez <b>Ici Occitanie</b>, nous a fait le plaisir de répondre à nos questions dans cette interview de plus de 30 minutes. La photo ci-contre a été prise au moment de l’entretien en tant que preuve de la véracité de cet échange. Dans cette entrevue, de nombreux sujets sont évoqués : le mental, l’économie, les médias et bien d'autres thématiques clés du sport professionnel.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <div class="photo-encart">
+                            <img src="image/interview.jpeg" class="img-illustr" alt="Interview Alexandre VAU">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="audio-player-box">
+                    <h3>🎙️ Interview Exclusive (36 min)</h3>
+                    <p>Écoutez notre entretien complet avec Alexandre VAU sur l'évolution du journalisme sportif.</p>
+                    <audio id="interview-audio" controls>
+                        <source src="interview.m4a" type="audio/mp4">
+                        Votre navigateur ne supporte pas l'élément audio.
+                    </audio>
+                    <p style="font-size: 0.9rem; color: #888; margin-top: 15px;">Journaliste : Alexandre VAU (Ici Occitanie) | Format : M4A</p>
+                </div>
+
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>L'impact de la presse : Performance vs Critique</h3>
+                        <p>La relation entre les prestations des joueurs sur le terrain et leur traitement médiatique est un puissant moteur psychologique. La presse sportive possède le pouvoir de magnifier une performance ou, à l'inverse, d'enterrer une carrière naissante sous le poids des gros titres.</p>
+                        <p>Lorsqu'un joueur traverse une période de méforme, l'accumulation de critiques acerbes dans les colonnes ou sur les plateaux de télévision engendre une baisse de confiance drastique. Ce phénomène crée un cercle vicieux : la pression médiatique paralyse l'athlète, détériore ses statistiques et impacte directement sa valeur marchande. À ce niveau de compétition, le mental devient indissociable du traitement de l'information.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="image/micro.jpg" class="img-illustr" alt="Presse et Journalisme">
+                    </div>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>Réseaux sociaux et mutation de la consommation</h3>
+                        <p>L'avènement d'Instagram, de TikTok et d'X (anciennement Twitter) a profondément bouleversé le rapport au football. On assiste aujourd'hui à un véritable changement structurel de consommation : les nouvelles générations délaissent de plus en plus les matchs complets de 90 minutes au profit de formats condensés, de résumés instantanés et de compilations d'actions spectaculaires.</p>
+                        <p>Cette culture de l'immédiat pousse les joueurs à soigner leur propre communication numérique, court-circuitant parfois les médias traditionnels. Cette influence globale transforme le football en un flux continu de contenus divertissants, où le buzz extra-sportif et la mise en scène de la vie des stars rivalisent désormais d'importance avec les résultats du week-end.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=2074" class="img-illustr" alt="Réseaux Sociaux Applications">
+                    </div>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>La guerre des droits TV : L'ère du morcellement</h3>
+                        <p>L'économie des médias du football est dictée par la bataille féroce des diffuseurs. L'époque où une seule chaîne historique centralisait tout le championnat est révolue. L'arrivée d'acteurs comme DAZN, combinée à la présence de BeIN Sports ou Canal+, a fragmenté l'offre télévisuelle de manière inédite.</p>
+                        <p>Ce morcellement des droits télévisuels pèse lourdement sur le portefeuille des amateurs de football, obligés de cumuler les abonnements coûteux pour suivre leur équipe. Pour les clubs, cette dépendance financière envers les grilles de diffusion est absolue, car une baisse des droits télévisuels mettrait directement en péril l'équilibre budgétaire du football professionnel français et sa compétitivité européenne.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="image/droit.jpg" class="img-illustr" alt="Stade Caméra Télévision">
+                    </div>
+                </div>
+            `
+        },
+        staff: {
+            zoom: 'zoom-staff',
+            bgImage: 'url("image/staff.png")',
+            html: `
+                <div class="header-content">
+                    <h2>Staff & Arbitrage : L'Ombre et la Règle</h2>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>Les métiers de l’ombre</h3>
+                        <p>Data analyste, entraîneur adjoint, préparateur physique, préparateurs mentaux... Ils ont tous un énorme rôle à jouer. Certes, ils ne font pas non plus la composition de l’équipe comme nous le précise Alexandre VAU dans l’interview, mais ils contribuent à l’amélioration des performances de l’équipe.</p>
+                        <p>Pour Alexandre VAU c’est clair, c’est le préparateur physique qui semble être le membre le plus important du staff d’une équipe. Sans lui, les équipes peuvent se retrouver en méforme et se retrouver avec une infirmerie pleine à craquer. Aujourd’hui, tous les membres du staff sont importants et ont leur rôle à jouer.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="image/staff.jpg" class="img-illustr" alt="Staff technique">
+                    </div>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>Les clubs, un employeur de qualité</h3>
+                        <p>Les clubs de foot sont une vraie source d’emploi. D’après nos sources, un club moyen de ligue 1 comme Toulouse FC ou Saint-Étienne compte 50 employés tandis que les plus grands clubs comptent 1000 employés comme le FC Barcelone ou le FC Bayern Munich.</p>
+                        <p>Un club permet donc de générer de l’emploi à son échelle, cela mobilise une ville ou un pays pour éviter le chômage, et généralement ce sont des employés provenant du pays du club, excepté pour les grands clubs comme le PSG. Mais un club ne produit pas seulement des emplois directs. Si on prend l’exemple de Marseille, ville de foot, le club fait travailler presque toute la ville à lui tout seul. Les soirs de match, il y a une mobilisation de sécurité, ramasseurs de balles, etc., qui ne sont pas réellement comptés comme salariés directs du club. De plus, comme signifié précédemment, la ville vit pour le club et donc hôtel, restaurant, boutique, transport ce sont des emplois induits par le club qui ne sont pas comptabilisés en termes de chiffres ou de statistiques visibles, mais il est certain que sans un club de foot, ces services ne seraient pas autant actifs. Et comme soumis dans cette partie, une corrélation claire est à faire entre performance et emploi : plus un club est employeur, plus son statut est valorisé.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="https://images.unsplash.com/photo-1577412647305-991150c7d163?q=80&w=2070" class="img-illustr" alt="Emplois football">
+                    </div>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>L’IA : un outil avantageux ou contraignant</h3>
+                        <p>Effectivement, l’IA n’est pas à renier, et probablement qu’aujourd’hui tous les clubs de foot l’utilisent. Alexandre VAU signifie que l’IA pourra évidemment améliorer les performances et les analyses vidéo. Il est certain que l’IA a un avantage indéniable quant à l’accélération des tâches de récupération de données, de statistiques. Aujourd’hui, même les championnats l’utilisent pour rédiger leurs feuilles statistiques, on pense notamment à la Premier League qui est en partenariat avec l’IA Copilot et cela permet d’aider certains domaines de l’analyse des membres du staff d’un club.</p>
+                        <p>Mais aujourd’hui, la peur s’installe aussi car un club, comme il est dit dans la partie des emplois, est un immense employeur. Mais l’IA ne pourrait-elle pas remplacer certains de ses salariés ? D’après Alexandre VAU, c’est une dystopie que de penser que l’IA va remplacer ces métiers-là, il faudra toujours des hommes derrière pour pouvoir gérer et analyser foncièrement ce type de données.</p>
+                        <p>Cependant, il n’y a pas seulement les clubs qui utilisent l’IA, il y a aussi les joueurs qui souhaitent s’éviter de recruter un agent. Cela s’est démontré avec le joueur Dimitri Michel qui a utilisé l'IA pour choisir le club qu'il devrait rejoindre, ainsi que la manière dont il devrait négocier son salaire. Cela est un avantage pour le joueur car il n’a pas besoin de payer son agent ni de lui passer des commissions, mais cela peut avoir un inconvénient juridique car généralement un joueur mécontent de son transfert peut attaquer en justice son agent, or là il est impossible d’attaquer en justice l’IA que M. Michel a utilisée puisque cela voudrait dire s’attaquer en justice lui-même d’après la loi.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=2070" class="img-illustr" alt="IA Intelligence Artificielle">
+                    </div>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>L’arbitrage et son influence</h3>
+                        <p>De tout temps, l’arbitrage a toujours été essentiel à la compétition sportive. Historiquement présents directement sur la pelouse, les officiels partagent désormais leur autorité à distance depuis la Coupe du Monde 2018 avec l’apparition de l’assistance vidéo à l’arbitrage (la VAR). Mais cette évolution technologique s'inscrit dans un mouvement permanent : chaque année, l’IFAB (l'instance internationale garante des lois du jeu) édicte de nouvelles règles ou consignes.</p>
+                        <p>Ces directives ne sont jamais appliquées à l'aveugle. Elles passent d'abord par de rigoureuses phases de tests au sein de divisions inférieures. C'est le cas par exemple du championnat de National (la 3ème division française), régulièrement désigné comme laboratoire d'expérimentation pour éprouver les nouvelles règles avant leur déploiement global.</p>
+                        <p>En somme, si les textes de lois sont complexes, ce sont surtout les "zones grises" qui font débat. Ces situations ambiguës, non définies précisément par le règlement officiel, laissent place à la propre interprétation de l'arbitre et s'avèrent les plus contestables. Cet aspect est sans doute l'élément le plus marquant de notre sujet, car les arbitres détiennent le pouvoir direct de sanctionner et de faire basculer le cours d’un match.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="image/arbitre.jpg" class="img-illustr" alt="Arbitre de football carton">
+                    </div>
+                </div>
+            `
+        },
+        supporters: {
+            zoom: 'zoom-supporters',
+            bgImage: 'url("image/supporter.png")',
+            html: `
+                <div class="header-content">
+                    <h2>Le 12ème Homme : Ferveur & Psychologie</h2>
+                </div>
+                <img src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=2093" class="section-img" alt="Stade en ferveur">
+                <div class="grid-info">
+                    <div>
+                        <h3>L'avantage "domicile" décrypté</h3>
+                        <p>Le public n'est pas qu'un décor. Des études montrent que les encouragements massifs déclenchent une hausse de testostérone et d'adrénaline chez les joueurs locaux. Cette chimie naturelle améliore la vitesse de réaction et la résistance à la fatigue.</p>
+                    </div>
+                    <div>
+                        <h3>L'impact économique direct</h3>
+                        <p>Le supporter est également le premier poumon financier du club. Par l'achat des tenues officielles, des places de match et des produits consommés, les fans injectent des liquidités cruciales permettant de réinvestir dans le club.</p>
+                    </div>
+                    <div>
+                        <h3>Pression et Équité</h3>
+                        <p>L'influence psychologique s'étend à l'arbitre. La pression sonore peut inconsciemment influencer les décisions. À l'inverse, un public mécontent peut devenir un facteur de stress paralysant pour sa propre équipe.</p>
+                    </div>
+                </div>
+                <img src="https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=2070" class="section-img" alt="Tifo de supporters">
+                <div class="grid-info">
+                    <div>
+                        <h3>Intimidation Visuelle : Le Tifo</h3>
+                        <p>La performance commence dès le tunnel. Un tifo monumental n'est pas qu'une animation artistique ; c'est une démonstration de force qui réduit la confiance de l'adversaire avant même le coup d'envoi.</p>
+                    </div>
+                    <div>
+                        <h3>Le 12ème Homme Numérique</h3>
+                        <p>Aujourd'hui, une communauté numérique soudée agit comme un bouclier. Les campagnes de soutien massives sur les réseaux sociaux renforcent la résilience mentale des joueurs lors des périodes de doute.</p>
+                    </div>
+                    <div>
+                        <h3>Le Paradoxe du Soutien</h3>
+                        <p>Le soutien est une arme à double tranchant. Lorsque ferveur se transforme en exigence toxique, elle génère un stress inhibiteur. Les joueurs perdent en créativité par peur de décevoir la tribune.</p>
+                    </div>
+                </div>
+            `
+        },
+        conclusion: {
+            zoom: 'zoom-eco',
+            bgImage: 'url("https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=2070")',
+            html: `
+                <div class="header-content">
+                    <h2 style="font-size: 2.1rem;">Conclusion : Pourquoi les performances d’un club ne dépendent pas seulement des joueurs</h2>
+                </div>
+                <div class="eco-row">
+                    <div class="eco-text">
+                        <h3>Synthèse de l'enquête</h3>
+                        <p>Au terme de ce parcours interactif, la réponse apparaît comme une évidence : les performances sportives d'un club de football sur le terrain ne sont que la partie émergée d'un gigantesque écosystème interdépendant. Si les joueurs exécutent les actions sous la lumière des projecteurs, leur réussite est structurellement conditionnée par des facteurs extérieurs invisibles.</p>
+                        <p>D'un point de vue <b>économique et structurel</b>, la mondialisation initiée par l'arrêt Bosman et l'avènement des clubs-États prouvent que le capital financier et l'influence politique (soft power) dictent la qualité globale des effectifs avant même le début de la saison. Sur le plan humain, <b>le personnel médical, technique et l'Intelligence Artificielle (le Staff)</b> forment une véritable usine de l'ombre indispensable : comme nous l'a confié le journaliste Alexandre VAU, un excellent préparateur physique est la clé pour éviter une infirmerie pleine et maintenir l'équipe en forme, tandis que les analystes optimisent chaque donnée de jeu.</p>
+                        <p>Enfin, la performance se joue au niveau mental et psychologique. <b>Les Médias</b> détiennent le pouvoir d'élever ou de briser la confiance d'un athlète à travers la critique ou la starification numérique sur les réseaux sociaux, impactant directement son jeu et sa valeur marchande. En parallèle, <b>les Supporters (le 12ème Homme)</b> agissent comme un puissant moteur biochimique. Leurs encouragements à domicile génèrent des pics de testostérone et d'adrénaline chez les athlètes, tandis que la pression d'un public hostile peut totalement paralyser une équipe ou influencer inconsciemment le corps arbitral. Un club de football ne gagne donc pas grâce à 11 individualités, mais grâce à l'harmonie d'une immense machinerie collective.</p>
+                    </div>
+                    <div class="eco-img-container">
+                        <img src="image/conclusion.jpg" class="img-illustr" alt="Terrain vide fin de match">
+                    </div>
+                </div>
+                <div class="audio-player-box" style="margin-top: 20px; background: rgba(0,0,0,0.5);">
+                    <h3>Crédits & Remerciements</h3>
+                    <p style="text-align: center; color: #aaa; margin-bottom: 5px;">Un grand merci à <b>Alexandre VAU</b> (Journaliste chez Ici Occitanie) pour son expertise et le temps accordé lors de notre entretien.</p>
+                    <p style="text-align: center; color: #4CAF50; font-weight: bold; margin-top: 20px;">Webdocumentaire réalisé par Samuel AZNAR, Noa LIMON et Lubin BOSCREDON.</p>
+                    <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">© 2026 Tous droits réservés - Au-delà du Terrain</p>
+                </div>
+            `
+        }
+    };
+
+    function show(key) {
+        const stadium = document.getElementById('stadium');
+        const overlay = document.getElementById('overlay');
+        const content = document.getElementById('dynamic-content');
+
+        stadium.classList.add(data[key].zoom);
+        stadium.style.filter = "blur(10px)";
+
+        if(key !== 'conclusion' && visitedZones[key] === false) {
+            visitedZones[key] = true;
+            totalVisited++;
+            document.getElementById('visited-count').innerText = totalVisited;
+            
+            if(totalVisited === 4) {
+                document.getElementById('conclusion-btn').style.display = "block";
+                document.getElementById('exploration-bar').innerHTML = "🎉 Félicitations ! Toutes les zones ont été explorées.";
+                document.getElementById('exploration-bar').style.borderColor = "#ffcc00";
+                document.getElementById('exploration-bar').style.color = "#ffcc00";
+            }
+        }
+
+        setTimeout(() => {
+            overlay.style.backgroundImage = data[key].bgImage;
+            content.innerHTML = data[key].html;
+            overlay.classList.add('active');
+            document.getElementById('filter').scrollTop = 0;
+
+            const interviewAudio = document.getElementById('interview-audio');
+            if (interviewAudio) {
+                interviewAudio.addEventListener('play', () => {
+                    isInterviewPlaying = true;
+                    bgMusic.pause();
+                    updateSoundControlUI();
+                });
+
+                interviewAudio.addEventListener('pause', () => {
+                    isInterviewPlaying = false;
+                    if (soundEnabled) bgMusic.play().catch(e => {}); 
+                    updateSoundControlUI();
+                });
+
+                interviewAudio.addEventListener('ended', () => {
+                    isInterviewPlaying = false;
+                    if (soundEnabled) bgMusic.play().catch(e => {});
+                    updateSoundControlUI();
+                });
+            }
+
+        }, 600);
+    }
+
+    function hide() {
+        const stadium = document.getElementById('stadium');
+        const overlay = document.getElementById('overlay');
+        
+        const interviewAudio = document.getElementById('interview-audio');
+        if(interviewAudio) {
+            interviewAudio.pause();
+            interviewAudio.currentTime = 0;
+        }
+        isInterviewPlaying = false;
+
+        if (soundEnabled) bgMusic.play().catch(e => {});
+        updateSoundControlUI();
+
+        overlay.classList.remove('active');
+        stadium.className = 'container';
+        stadium.style.filter = "none";
+    }
+</script>
+
+</body>
+</html>
